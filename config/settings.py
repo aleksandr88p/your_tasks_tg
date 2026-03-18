@@ -16,12 +16,6 @@ class Settings:
     # Логирование
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     
-    # Язык по умолчанию
-    DEFAULT_LANGUAGE = os.getenv("DEFAULT_LANGUAGE", "ru")
-    
-    # Поддерживаемые языки
-    SUPPORTED_LANGUAGES = ["ru", "en"]
-    
     @classmethod
     def validate(cls):
         """Проверка обязательных настроек"""

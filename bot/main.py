@@ -29,7 +29,6 @@ async def main():
         
         logger.info("🤖 YourTasks Bot запускается...")
         logger.info(f"🔗 API URL: {settings.API_URL}")
-        logger.info(f"🌐 Язык по умолчанию: {settings.DEFAULT_LANGUAGE}")
         
         # Подключаем роутеры
         dp.include_router(base_router)
