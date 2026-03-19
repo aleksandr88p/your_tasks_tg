@@ -212,8 +212,10 @@ DEFAULT_LANGUAGE=ru
 
 ## 📚 Документация API
 
-- [YourTasks API Docs](http://185.182.82.203:8000/docs)
 - [YourTasks GitHub](https://github.com/aleksandr88p/your_tasks)
+
+**⚠️ Внимание:** Для работы бота требуется настройка YourTasks API. 
+Подробности и инструкции по установке смотрите в репозитории проекта.
 
 ## 🤝 Вклад в проект
 
