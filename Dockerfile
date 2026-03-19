@@ -13,10 +13,9 @@ COPY requirements.txt .
 # 5. Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Копируем код приложения
+# 6. Копируем код приложения (БЕЗ main.py!)
 COPY bot/ ./bot/
 COPY config/ ./config/
-COPY main.py .
 
-# 7. Команда запуска приложения (порт не нужен, бот не слушает порт)
+# 7. Команда запуска (запускаем из папки bot)
 CMD ["python", "-m", "bot.main"]
