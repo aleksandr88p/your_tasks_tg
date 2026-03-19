@@ -498,9 +498,23 @@ async def handle_active_tasks(message: types.Message):
         
         response_text = f"🟢 <b>Активные задачи ({len(active_tasks)}):</b>\n\n"
         for task in active_tasks:
+            # Получаем время для задачи
+            task_time = await api_client.get_task_time(message.from_user.id, task.get('id'))
+            hours = task_time // 60
+            minutes = task_time % 60
+            
+            time_text = ""
+            if task_time > 0:
+                if hours > 0:
+                    time_text = f"⏱️ {hours}ч {minutes}м"
+                else:
+                    time_text = f"⏱️ {minutes}м"
+            else:
+                time_text = "⏱️ 0м"
+            
             response_text += (
                 f"🟢 <b>ID: {task.get('id')}</b> - {task.get('title')}\n"
-                f"   Статус: {task.get('status', 'unknown')}\n\n"
+                f"   {time_text} | Статус: {task.get('status', 'unknown')}\n\n"
             )
         
         print(f"[DEBUG] Ответ для активных: {response_text}")  # Отладка
@@ -524,9 +538,23 @@ async def handle_completed_tasks(message: types.Message):
         
         response_text = f"✅ <b>Завершенные задачи ({len(completed_tasks)}):</b>\n\n"
         for task in completed_tasks:
+            # Получаем время для задачи
+            task_time = await api_client.get_task_time(message.from_user.id, task.get('id'))
+            hours = task_time // 60
+            minutes = task_time % 60
+            
+            time_text = ""
+            if task_time > 0:
+                if hours > 0:
+                    time_text = f"⏱️ {hours}ч {minutes}м"
+                else:
+                    time_text = f"⏱️ {minutes}м"
+            else:
+                time_text = "⏱️ 0м"
+            
             response_text += (
                 f"✅ <b>ID: {task.get('id')}</b> - {task.get('title')}\n"
-                f"   Статус: {task.get('status', 'unknown')}\n\n"
+                f"   {time_text} | Статус: {task.get('status', 'unknown')}\n\n"
             )
         
         await message.answer(response_text, reply_markup=get_main_menu())
@@ -546,9 +574,24 @@ async def handle_list_tasks(message: types.Message):
         response_text = "📋 <b>Ваши задачи:</b>\n\n"
         for task in tasks:
             status_emoji = "🟢" if task.get('status') == 'active' else "✅"
+            
+            # Получаем время для задачи
+            task_time = await api_client.get_task_time(message.from_user.id, task.get('id'))
+            hours = task_time // 60
+            minutes = task_time % 60
+            
+            time_text = ""
+            if task_time > 0:
+                if hours > 0:
+                    time_text = f"⏱️ {hours}ч {minutes}м"
+                else:
+                    time_text = f"⏱️ {minutes}м"
+            else:
+                time_text = "⏱️ 0м"
+            
             response_text += (
                 f"{status_emoji} <b>ID: {task.get('id')}</b> - {task.get('title')}\n"
-                f"   Статус: {task.get('status', 'unknown')}\n\n"
+                f"   {time_text} | Статус: {task.get('status', 'unknown')}\n\n"
             )
         
         await message.answer(response_text)

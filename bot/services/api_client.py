@@ -105,6 +105,22 @@ class YourTasksAPIClient:
                     error_text = await response.text()
                     raise Exception(f"Failed to get timelogs: {response.status} - {error_text}")
     
+    async def get_task_time(self, telegram_id: int, task_id: int) -> int:
+        """Получить общее время для конкретной задачи в минутах"""
+        try:
+            # Получаем все логи времени
+            timelogs = await self.get_timelogs(telegram_id)
+            
+            # Суммируем время для конкретной задачи
+            total_minutes = 0
+            for log in timelogs:
+                if log.get('task_id') == task_id:
+                    total_minutes += log.get('minutes', 0)
+            
+            return total_minutes
+        except Exception:
+            return 0
+    
     async def get_stats(self, telegram_id: int) -> Dict[str, Any]:
         """Получить общую статистику пользователя"""
         async with aiohttp.ClientSession() as session:
