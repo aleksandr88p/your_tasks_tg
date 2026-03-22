@@ -91,61 +91,65 @@ async def debug_all_messages(message: types.Message):
     elif message.text == "📋 Все задачи":
         await handle_list_tasks(message)
     elif message.text == "⏰ Добавить время":
-        # Показываем список задач и просим выбрать по порядку
+        # Показываем список только активных задач для добавления времени
         try:
             tasks = await api_client.get_tasks(message.from_user.id)
             
-            if not tasks:
-                await message.answer("📝 У вас пока нет задач. Создайте первую командой 📝 Новая задача")
+            # Фильтруем только активные задачи
+            active_tasks = [task for task in tasks if task.get('status') == 'active']
+            
+            if not active_tasks:
+                await message.answer("� У вас нет активных задач для добавления времени", reply_markup=get_main_menu())
                 return
             
-            # Формируем список задач с порядковыми номерами
-            response_text = "⏰ <b>Выберите задачу по порядковому номеру:</b>\n\n"
-            for i, task in enumerate(tasks, 1):
-                status_emoji = "🟢" if task.get('status') == 'active' else "✅"
-                response_text += f"{i}. {status_emoji} {task.get('title')} (ID: {task.get('id')})\n"
+            # Формируем список активных задач с порядковыми номерами
+            response_text = "⏰ <b>Выберите активную задачу для добавления времени:</b>\n\n"
+            for i, task in enumerate(active_tasks, 1):
+                response_text += f"{i}. 🟢 {task.get('title')} (ID: {task.get('id')})\n"
             
             response_text += "\nВведите номер задачи (1, 2, 3...):"
             
-            # Сохраняем список задач для выбора
+            # Сохраняем список активных задач для выбора
             user_states[message.from_user.id] = {
                 'action': 'add_time', 
                 'step': 'waiting_task_number', 
-                'tasks': tasks
+                'tasks': active_tasks
             }
             
             await message.answer(response_text, reply_markup=get_cancel_keyboard())
             
         except Exception as e:
-            await message.answer(f"❌ Ошибка при получении задач: {str(e)}")
+            await message.answer(f"❌ Ошибка при получении задач: {str(e)}", reply_markup=get_main_menu())
     elif message.text == "🏁 Завершить задачу":
-        # Показываем список задач и просим выбрать по порядку
+        # Показываем список только активных задач для завершения
         try:
             tasks = await api_client.get_tasks(message.from_user.id)
             
-            if not tasks:
-                await message.answer("📝 У вас пока нет задач")
+            # Фильтруем только активные задачи
+            active_tasks = [task for task in tasks if task.get('status') == 'active']
+            
+            if not active_tasks:
+                await message.answer("� У вас нет активных задач для завершения", reply_markup=get_main_menu())
                 return
             
-            # Формируем список задач с порядковыми номерами
-            response_text = "🏁 <b>Выберите задачу для завершения по номеру:</b>\n\n"
-            for i, task in enumerate(tasks, 1):
-                status_emoji = "🟢" if task.get('status') == 'active' else "✅"
-                response_text += f"{i}. {status_emoji} {task.get('title')} (ID: {task.get('id')})\n"
+            # Формируем список активных задач с порядковыми номерами
+            response_text = "🏁 <b>Выберите активную задачу для завершения:</b>\n\n"
+            for i, task in enumerate(active_tasks, 1):
+                response_text += f"{i}. 🟢 {task.get('title')} (ID: {task.get('id')})\n"
             
             response_text += "\nВведите номер задачи (1, 2, 3...):"
             
-            # Сохраняем список задач для выбора
+            # Сохраняем список активных задач для выбора
             user_states[message.from_user.id] = {
                 'action': 'complete_task', 
                 'step': 'waiting_task_number', 
-                'tasks': tasks
+                'tasks': active_tasks
             }
             
             await message.answer(response_text, reply_markup=get_cancel_keyboard())
             
         except Exception as e:
-            await message.answer(f"❌ Ошибка при получении задач: {str(e)}")
+            await message.answer(f"❌ Ошибка при получении задач: {str(e)}", reply_markup=get_main_menu())
     elif message.text == "� Активировать задачу":
         # Показываем список задач и просим выбрать по порядку
         try:
@@ -191,6 +195,15 @@ async def debug_all_messages(message: types.Message):
         )
     elif message.text == "📊 Статистика":
         await handle_stats_command(message)
+    elif message.text == "📅 Время за другой день":
+        # Начинаем процесс добавления времени за другой день
+        await handle_add_time_for_past_date(message)
+    elif message.text == "🗑️ Waste Time":
+        # Начинаем процесс логирования waste time
+        await handle_waste_time_start(message)
+    elif message.text == "📊 Статистика Waste Time":
+        # Показываем статистику waste time
+        await handle_waste_time_stats(message)
     elif message.text == "❓ Помощь":
         await handle_help(message)
     # Обработка старых команд для совместимости
@@ -462,6 +475,291 @@ async def handle_user_input(message: types.Message, state: dict):
         except ValueError:
             await message.answer("❌ Введите число - номер задачи")
 
+    elif action == 'add_time_past' and step == 'waiting_time_type':
+        time_type = message.text.strip()
+        
+        if time_type == '1':
+            # Обычная задача
+            try:
+                tasks = await api_client.get_tasks(message.from_user.id)
+                active_tasks = [task for task in tasks if task.get('status') == 'active']
+                
+                if not active_tasks:
+                    await message.answer("🟢 У вас нет активных задач", reply_markup=get_main_menu())
+                    return
+                
+                response_text = "📅 <b>Выберите активную задачу:</b>\n\n"
+                for i, task in enumerate(active_tasks, 1):
+                    response_text += f"{i}. 🟢 {task.get('title')} (ID: {task.get('id')})\n"
+                response_text += "\nВведите номер задачи (1, 2, 3...):"
+                
+                user_states[user_id] = {
+                    'action': 'add_time_past',
+                    'step': 'waiting_task_number',
+                    'tasks': active_tasks,
+                    'time_type': 'normal'
+                }
+                await message.answer(response_text, reply_markup=get_cancel_keyboard())
+                
+            except Exception as e:
+                await message.answer(f"❌ Ошибка: {str(e)}", reply_markup=get_main_menu())
+                
+        elif time_type == '2':
+            # Waste Time
+            user_states[user_id] = {
+                'action': 'add_time_past',
+                'step': 'waiting_date',
+                'time_type': 'waste'
+            }
+            await message.answer(
+                "📅 <b>Waste Time за другой день</b>\n\n"
+                "Введите дату в формате ГГГГ-ММ-ДД:\n\n"
+                "Пример: 2026-03-21\n"
+                "Пример: 2026-03-20",
+                reply_markup=get_cancel_keyboard()
+            )
+        else:
+            await message.answer("❌ Введите 1 или 2")
+
+    elif action == 'add_time_past' and step == 'waiting_task_number':
+        try:
+            task_number = int(message.text)
+            tasks = state['tasks']
+            
+            if task_number < 1 or task_number > len(tasks):
+                await message.answer("❌ Неверный номер задачи. Попробуйте еще раз")
+                return
+                
+            # Получаем задачу по номеру
+            selected_task = tasks[task_number - 1]
+            task_id = selected_task.get('id')
+            
+            # Сохраняем задачу и переходим к дате
+            user_states[user_id] = {
+                'action': 'add_time_past',
+                'step': 'waiting_date',
+                'task_id': task_id,
+                'task_title': selected_task.get('title'),
+                'time_type': state.get('time_type', 'normal')
+            }
+            await message.answer(
+                f"📅 Введите дату в формате ГГГГ-ММ-ДД:\n\n"
+                f"Пример: 2026-03-21\n"
+                f"Пример: 2026-03-20\n\n"
+                f"Задача: {selected_task.get('title')}"
+            )
+        except ValueError:
+            await message.answer("❌ Введите число - номер задачи")
+            
+    elif action == 'add_time_past' and step == 'waiting_date':
+        date_text = message.text.strip()
+        
+        # Простая валидация даты
+        try:
+            from datetime import datetime
+            datetime.strptime(date_text, '%Y-%m-%d')
+        except ValueError:
+            await message.answer("❌ Неверный формат даты. Используйте ГГГГ-ММ-ДД")
+            return
+        
+        # Сохраняем дату и переходим к минутам
+        user_states[user_id] = {
+            'action': 'add_time_past',
+            'step': 'waiting_minutes',
+            'date': date_text,
+            'time_type': state.get('time_type', 'normal'),
+            'task_id': state.get('task_id'),
+            'task_title': state.get('task_title')
+        }
+        
+        if state.get('time_type') == 'waste':
+            await message.answer(
+                f"🗑️ Введите количество минут потраченных впустую за {date_text}:\n\n"
+                f"Пример: 30\n"
+                f"Пример: 45"
+            )
+        else:
+            await message.answer(
+                f"⏰ Введите количество минут для задачи «{state.get('task_title')}» за {date_text}:\n\n"
+                f"Пример: 30\n"
+                f"Пример: 45"
+            )
+        
+    elif action == 'add_time_past' and step == 'waiting_minutes':
+        try:
+            minutes = int(message.text)
+            if minutes <= 0:
+                await message.answer("❌ Количество минут должно быть положительным числом")
+                return
+            
+            if state.get('time_type') == 'waste':
+                # Для waste time сразу переходим к описанию
+                user_states[user_id] = {
+                    'action': 'add_time_past',
+                    'step': 'waiting_waste_description',
+                    'date': state['date'],
+                    'time_type': 'waste',
+                    'minutes': minutes
+                }
+                await message.answer(
+                    f"🗑️ Введите описание что делали {state['date']}:\n\n"
+                    f"Пример: Смотрел YouTube\n"
+                    f"Пример: Прокрастинировал в соцсетях"
+                )
+            else:
+                # Для обычной задачи переходим к комментарию
+                user_states[user_id] = {
+                    'action': 'add_time_past',
+                    'step': 'waiting_comment',
+                    'task_id': state['task_id'],
+                    'task_title': state['task_title'],
+                    'date': state['date'],
+                    'time_type': 'normal',
+                    'minutes': minutes
+                }
+                await message.answer(
+                    f"⏰ Введите комментарий для задачи «{state['task_title']}» за {state['date']}:\n\n"
+                    f"Пример: Работал над проектом\n"
+                    f"Пример: Изучал документацию"
+                )
+        except ValueError:
+            await message.answer("❌ Введите число - количество минут")
+            
+    elif action == 'add_time_past' and step == 'waiting_waste_description':
+        description = message.text.strip()
+        
+        try:
+            # Создаем waste task если нужно
+            waste_task_title = "WASTE TIME (непродуктивное время)"
+            tasks = await api_client.get_tasks(message.from_user.id)
+            waste_task = None
+            
+            for task in tasks:
+                if task.get('title') == waste_task_title:
+                    waste_task = task
+                    break
+            
+            if not waste_task:
+                waste_task = await api_client.create_task(message.from_user.id, waste_task_title)
+            
+            # Добавляем время с датой в комментарии
+            result = await api_client.add_time(
+                message.from_user.id, 
+                waste_task.get('id'), 
+                state['minutes'], 
+                f"WASTE: {description} (дата: {state['date']})"
+            )
+            
+            await message.answer(
+                f"🗑️ Waste Time записано!\n\n"
+                f"📝 Что делали: {description}\n"
+                f"📅 Дата: {state['date']}\n"
+                f"⏱️ Минут: {state['minutes']}\n"
+                f"🕐 Лог ID: {result.get('id', 'N/A')}\n\n"
+                f"Что делаем дальше?",
+                reply_markup=get_main_menu()
+            )
+            
+        except Exception as e:
+            await message.answer(f"❌ Ошибка при записи waste time: {str(e)}")
+        
+        del user_states[user_id]
+            
+    elif action == 'add_time_past' and step == 'waiting_comment':
+        comment = message.text.strip()
+        
+        try:
+            # Добавляем время с указанной датой (пока используем текущую дату)
+            # TODO: Здесь нужно будет изменить API для поддержки даты
+            result = await api_client.add_time(
+                message.from_user.id, 
+                state['task_id'], 
+                state['minutes'], 
+                f"{comment} (дата: {state['date']})"
+            )
+            
+            await message.answer(
+                f"✅ Время добавлено!\n\n"
+                f"📋 Задача: {state['task_title']}\n"
+                f"📅 Дата: {state['date']}\n"
+                f"⏱️ Минут: {state['minutes']}\n"
+                f"💬 Комментарий: {comment}\n"
+                f"🕐 Лог ID: {result.get('id', 'N/A')}\n\n"
+                f"Что делаем дальше?",
+                reply_markup=get_main_menu()
+            )
+            
+        except Exception as e:
+            await message.answer(f"❌ Ошибка при добавлении времени: {str(e)}")
+        
+        # Сбрасываем состояние
+        del user_states[user_id]
+
+    elif action == 'waste_time' and step == 'waiting_description':
+        description = message.text.strip()
+        
+        # Сохраняем описание и переходим к минутам
+        user_states[user_id] = {
+            'action': 'waste_time',
+            'step': 'waiting_minutes',
+            'description': description
+        }
+        await message.answer(
+            f"🗑️ Введите количество минут потраченного впустую:\n\n"
+            f"Пример: 30\n"
+            f"Пример: 45"
+        )
+        
+    elif action == 'waste_time' and step == 'waiting_minutes':
+        try:
+            minutes = int(message.text)
+            if minutes <= 0:
+                await message.answer("❌ Количество минут должно быть положительным числом")
+                return
+                
+            try:
+                # Создаем специальную задачу для waste time или используем существующую
+                waste_task_title = "WASTE TIME (непродуктивное время)"
+                
+                # Ищем существующую waste task
+                tasks = await api_client.get_tasks(message.from_user.id)
+                waste_task = None
+                
+                for task in tasks:
+                    if task.get('title') == waste_task_title:
+                        waste_task = task
+                        break
+                
+                # Если нет waste task, создаем ее
+                if not waste_task:
+                    waste_task = await api_client.create_task(message.from_user.id, waste_task_title)
+                
+                # Добавляем время к waste task
+                result = await api_client.add_time(
+                    message.from_user.id, 
+                    waste_task.get('id'), 
+                    minutes, 
+                    f"WASTE: {state['description']}"
+                )
+                
+                await message.answer(
+                    f"🗑️ Waste Time записано!\n\n"
+                    f"📝 Что делали: {state['description']}\n"
+                    f"⏱️ Минут: {minutes}\n"
+                    f"🕐 Лог ID: {result.get('id', 'N/A')}\n\n"
+                    f"Что делаем дальше?",
+                    reply_markup=get_main_menu()
+                )
+                
+            except Exception as e:
+                await message.answer(f"❌ Ошибка при записи waste time: {str(e)}")
+            
+        except ValueError:
+            await message.answer("❌ Введите число - количество минут")
+        
+        # Сбрасываем состояние
+        del user_states[user_id]
+
 async def create_task_from_text(message: types.Message, task_title: str):
     """Создать задачу из текста пользователя"""
     
@@ -710,3 +1008,111 @@ async def handle_active_command(message: types.Message):
         await message.answer("❌ ID задачи должен быть числом")
     except Exception as e:
         await message.answer(f"❌ Ошибка при активации задачи: {str(e)}")
+
+async def handle_add_time_for_past_date(message: types.Message):
+    """Начало процесса добавления времени за другой день"""
+    await message.answer(
+        "📅 <b>Время за другой день</b>\n\n"
+        "Выберите тип времени:\n"
+        "1. ⏰ Обычная задача - время для работы\n"
+        "2. 🗑️ Waste Time - время впустую\n\n"
+        "Введите 1 или 2:",
+        reply_markup=get_cancel_keyboard()
+    )
+    
+    # Сохраняем состояние
+    user_states[message.from_user.id] = {
+        'action': 'add_time_past',
+        'step': 'waiting_time_type'
+    }
+
+async def handle_waste_time_start(message: types.Message):
+    """Начало процесса логирования waste time"""
+    await message.answer(
+        "🗑️ <b>Waste Time - логирование времени впустую</b>\n\n"
+        "Это помогает понять сколько времени тратится не продуктивно.\n\n"
+        "Введите описание (что делали):\n"
+        "Пример: Смотрел YouTube\n"
+        "Пример: Прокрастинировал в соцсетях\n"
+        "Пример: Бездельничал",
+        reply_markup=get_cancel_keyboard()
+    )
+    
+    # Сохраняем состояние
+    user_states[message.from_user.id] = {
+        'action': 'waste_time',
+        'step': 'waiting_description'
+    }
+
+async def handle_waste_time_stats(message: types.Message):
+    """Статистика waste time"""
+    try:
+        # Получаем все задачи
+        tasks = await api_client.get_tasks(message.from_user.id)
+        
+        # Ищем waste task
+        waste_task_title = "WASTE TIME (непродуктивное время)"
+        waste_task = None
+        
+        for task in tasks:
+            if task.get('title') == waste_task_title:
+                waste_task = task
+                break
+        
+        if not waste_task:
+            await message.answer("🗑️ У вас пока нет записей о потраченном впустую времени", reply_markup=get_main_menu())
+            return
+        
+        # Получаем все логи времени для waste task
+        timelogs = await api_client.get_timelogs(message.from_user.id)
+        
+        # Фильтруем логи только для waste task
+        waste_logs = []
+        for log in timelogs:
+            if log.get('task_id') == waste_task.get('id'):
+                waste_logs.append(log)
+        
+        if not waste_logs:
+            await message.answer("🗑️ У вас пока нет записей о потраченном впустую времени", reply_markup=get_main_menu())
+            return
+        
+        # Считаем статистику
+        total_waste_minutes = sum(log.get('minutes', 0) for log in waste_logs)
+        today_waste = 0
+        last_5_days_waste = 0
+        
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        
+        for log in waste_logs:
+            logged_at = log.get('logged_at', '')
+            if logged_at:
+                try:
+                    log_date = datetime.fromisoformat(logged_at.replace('Z', '+00:00')).date()
+                    
+                    # За сегодня
+                    if log_date == now.date():
+                        today_waste += log.get('minutes', 0)
+                    
+                    # За последние 5 дней
+                    if log_date >= (now - timedelta(days=5)).date():
+                        last_5_days_waste += log.get('minutes', 0)
+                except:
+                    continue
+        
+        # Среднее в день за последние 5 дней
+        avg_daily = last_5_days_waste / 5 if last_5_days_waste > 0 else 0
+        
+        response_text = (
+            f"🗑️ <b>Статистика Waste Time:</b>\n\n"
+            f"📊 Всего потрачено впустую: {total_waste_minutes // 60}ч {total_waste_minutes % 60}м\n"
+            f"📅 Сегодня: {today_waste // 60}ч {today_waste % 60}м\n"
+            f"📆 За последние 5 дней: {last_5_days_waste // 60}ч {last_5_days_waste % 60}м\n"
+            f"📈 Среднее в день: {avg_daily // 60}ч {avg_daily % 60}м\n\n"
+            f"💡 <b>Совет:</b> Попробуйте уменьшить это время на 20% в следующую неделе!"
+        )
+        
+        await message.answer(response_text, reply_markup=get_main_menu())
+        
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при получении статистики: {str(e)}", reply_markup=get_main_menu())

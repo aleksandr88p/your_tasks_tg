@@ -18,14 +18,21 @@ def get_main_menu() -> ReplyKeyboardMarkup:
     )
     builder.row(
         KeyboardButton(text="⏰ Добавить время"),
-        KeyboardButton(text="📊 Статистика")
+        KeyboardButton(text="📅 Время за другой день")
     )
     builder.row(
-        KeyboardButton(text="🏁 Завершить задачу"),
-        KeyboardButton(text="🔄 Активировать задачу")
+        KeyboardButton(text="🗑️ Waste Time"),
+        KeyboardButton(text="📊 Статистика Waste Time")
     )
     builder.row(
-        KeyboardButton(text="❌ Отмена"),
+        KeyboardButton(text="📊 Статистика"),
+        KeyboardButton(text="🏁 Завершить задачу")
+    )
+    builder.row(
+        KeyboardButton(text="🔄 Активировать задачу"),
+        KeyboardButton(text="❌ Отмена")
+    )
+    builder.row(
         KeyboardButton(text="❓ Помощь")
     )
     
