@@ -220,7 +220,7 @@ python bot/main.py
 BOT_TOKEN=your_telegram_bot_token
 
 # YourTasks API URL
-API_URL=http://185.182.82.203:8000
+API_URL=API_URL
 
 # Настройки логирования
 LOG_LEVEL=INFO
